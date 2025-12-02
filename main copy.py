@@ -1,5 +1,6 @@
 import gmsh
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import splu
@@ -7,6 +8,7 @@ from matplotlib.tri import Triangulation
 
 class Main:
     def __init__(self):
+        # matplotlib.use('QtAgg')
         # Data
         # intern_radius = 30 / 1000
         # outer_radius = 50 / 1000
@@ -33,7 +35,7 @@ class Main:
         self.plot_K = 0
 
         # Pipeline
-        gmsh_gui = 1
+        gmsh_gui = 0
         self.generate_mesh(gmsh_gui=gmsh_gui, mesh_size=.2)
         print("Mesh generated")
         
@@ -65,7 +67,6 @@ class Main:
 
         # Tarefa 4
         force = self.t*(self.thickness * self.h)
-        inferno = self.get_nodes_from_face(2)
         loads = [[self.get_nodes_from_face(2), force, 0]]
         dirichlet = [[self.get_nodes_from_face(4), 0, True, True]]
 
@@ -82,8 +83,9 @@ class Main:
 
         print("Plotting results")
         scale_factor = 1e1
-        # self.plot_displacement_results(scale_factor=scale_factor, loads=loads, dirichlet=dirichlet, forces=True)
+        self.plot_displacement_results(scale_factor=scale_factor, loads=[], dirichlet=dirichlet, forces=True)
         self.calculate_stress()
+        self.get_max_displacement()
         self.plot_stresses(mesh=False, scale_factor=scale_factor)
 
     def check_bc_format(self, input):
@@ -169,6 +171,8 @@ class Main:
                     x_coord = self.deformed_coords[node_idx, 0]
                     y_coord = self.deformed_coords[node_idx, 1]
                     plt.scatter(x_coord, y_coord, color="green", zorder=3)
+
+        plt.title("Displacements")
 
         plt.show()
 
@@ -297,8 +301,8 @@ class Main:
         s1 = occ.addPlaneSurface([w1])
         occ.synchronize()
 
-        self.n_nodes_h = 2
-        self.n_nodes_v = 3
+        self.n_nodes_h = 8
+        self.n_nodes_v = 12
         mesh.setTransfiniteCurve(l1, self.n_nodes_h)
         mesh.setTransfiniteCurve(l2, self.n_nodes_v)
         mesh.setTransfiniteCurve(l3, self.n_nodes_h)
@@ -527,6 +531,18 @@ class Main:
         threshold = np.percentile(vm, 95)
         hot_nodes = np.where(vm >= threshold)[0]
         print("n hot nodes:", len(hot_nodes), "threshold:", threshold)
+
+    def get_max_displacement(self):
+        # norma do deslocamento em cada nó
+        disp_mag = np.linalg.norm(self.U, axis=1)
+
+        # pega valor e nó
+        max_val = disp_mag.max()
+        max_node = disp_mag.argmax()
+
+        print(f"Deslocamento máximo: {max_val:.6e} m no nó {max_node}")
+        return max_val, max_node
+
 
 if __name__ == "__main__":
     Main()
