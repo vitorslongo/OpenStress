@@ -1,11 +1,10 @@
 import gmsh
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import splu
 from matplotlib.tri import Triangulation
-from matplotlib import use
+
 class Main:
     def __init__(self):
         # matplotlib.use('QtAgg')

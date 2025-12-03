@@ -1,0 +1,13 @@
+[project]
+name = "openstress"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gmsh>=4.15.0",
+    "matplotlib>=3.10.7",
+    "numpy>=2.3.5",
+    "pyside6>=6.10.1",
+    "scipy>=1.16.3",
+]
