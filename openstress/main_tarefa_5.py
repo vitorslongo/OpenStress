@@ -524,10 +524,10 @@ class Main:
 
         vm = von_mises(S[:,0], S[:,1], S[:,2])
         s1, s2 = principal_stresses(S[:,0], S[:,1], S[:,2])
-        s_max_principal = np.maximum(s1, s2)
+        # s_max_principal = np.maximum(s1, s2)
 
         idx_vm_max = np.argmax(vm)
-        idx_s1_max = np.argmax(s1)
+        # idx_s1_max = np.argmax(s1)
         print("==============")
         print("Max Von Mises Stress (MPa):", round(vm[idx_vm_max]/10**6, 3), "node:", idx_vm_max+1)
         # print("s1_max (MPa):", round(s1[idx_s1_max]/10**6, 3), "node:", idx_s1_max)
