@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import splu
 from matplotlib.tri import Triangulation
-
+from matplotlib import use
 class Main:
     def __init__(self):
         # matplotlib.use('QtAgg')
@@ -66,15 +66,17 @@ class Main:
         # dirichlet = [[self.get_nodes_from_face(8), 0, True, False]]
 
         # Tarefa 4
+        # ================================
         force = self.t*(self.thickness * self.h)
         loads = [[self.get_nodes_from_face(2), force, 0]]
-        dirichlet = [[self.get_nodes_from_face(4), 0, True, True]]
+        # dirichlet = [[self.get_nodes_from_face(4), 0, True, True]]
+        dirichlet = [[self.get_nodes_from_face(4), 0, True, False], [[0], 0, False, True]]
 
 
         self.apply_nodal_forces(loads)
         self.apply_dirichlet(dirichlet)
 
-
+        # ===============================
         print("Boundary conditions applied")
         
         print("Initating solution")
@@ -83,10 +85,11 @@ class Main:
 
         print("Plotting results")
         scale_factor = 1e1
-        self.plot_displacement_results(scale_factor=scale_factor, loads=[], dirichlet=dirichlet, forces=True)
+        # self.plot_displacement_results(scale_factor=scale_factor, loads=[], dirichlet=dirichlet, forces=True)
         self.calculate_stress()
         self.get_max_displacement()
         self.plot_stresses(mesh=False, scale_factor=scale_factor)
+        # self.get_sigma_xx(12)
 
     def check_bc_format(self, input):
         return isinstance(input, list) and all(isinstance(i, list) for i in input)
@@ -300,9 +303,9 @@ class Main:
         w1 = occ.addWire([l1, l2, l3, l4])
         s1 = occ.addPlaneSurface([w1])
         occ.synchronize()
-
-        self.n_nodes_h = 8
-        self.n_nodes_v = 12
+        i=3
+        self.n_nodes_h = 4*i
+        self.n_nodes_v = 5*i
         mesh.setTransfiniteCurve(l1, self.n_nodes_h)
         mesh.setTransfiniteCurve(l2, self.n_nodes_v)
         mesh.setTransfiniteCurve(l3, self.n_nodes_h)
@@ -344,6 +347,8 @@ class Main:
         self.conectivity = np.zeros((self.number_of_elements, 4), dtype=int)
         self.conectivity[:, 0] = element_indexes
         self.conectivity[:, 1:] = element_nodes.reshape(-1, 3)
+        print(f"Número de nós: {self.number_of_nodes}")
+
 
     def get_constitutive_matrix(self, EPT=False, EPD=False):
         E = self.E
@@ -525,8 +530,8 @@ class Main:
         idx_vm_max = np.argmax(vm)
         idx_s1_max = np.argmax(s1)
         print("==============")
-        print("Max Von Mises Stress (MPa):", round(vm[idx_vm_max]/10**6, 3), "node:", idx_vm_max)
-        print("s1_max (MPa):", round(s1[idx_s1_max]/10**6, 3), "node:", idx_s1_max)
+        print("Max Von Mises Stress (MPa):", round(vm[idx_vm_max]/10**6, 3), "node:", idx_vm_max+1)
+        # print("s1_max (MPa):", round(s1[idx_s1_max]/10**6, 3), "node:", idx_s1_max)
 
         threshold = np.percentile(vm, 95)
         hot_nodes = np.where(vm >= threshold)[0]
@@ -540,9 +545,32 @@ class Main:
         max_val = disp_mag.max()
         max_node = disp_mag.argmax()
 
-        print(f"Deslocamento máximo: {max_val:.6e} m no nó {max_node}")
+        print(f"Deslocamento máximo: {max_val:.6e} m no nó {max_node+1}")
         return max_val, max_node
+    
+    def get_sigma_xx(self, node_idx):
+        """
+        Imprime a tensão sigma_xx no nó especificado.
 
+        O array self.sigma_nodal armazena as tensões na ordem:
+        [sigma_x, sigma_y, tau_xy]
+        sigma_xx é o primeiro componente (índice 0).
+
+        node_idx: Índice do nó (de 0 até self.number_of_nodes - 1).
+        """
+        # Verificação básica do índice
+        if node_idx < 0 or node_idx >= self.number_of_nodes:
+            print(f"Erro: Nó {node_idx} está fora do alcance (0 a {self.number_of_nodes - 1}).")
+            return None
+
+        # O primeiro componente é sigma_xx
+        sigma_xx_pa = self.sigma_nodal[node_idx, 0]
+        
+        # Converte para MPa para melhor legibilidade
+        sigma_xx_mpa = sigma_xx_pa / 1e6
+        
+        print(f"Tensão σ_xx no nó {node_idx}: {sigma_xx_mpa:.3f} MPa ({sigma_xx_pa:.3e} Pa)")
+        return sigma_xx_mpa
 
 if __name__ == "__main__":
     Main()
