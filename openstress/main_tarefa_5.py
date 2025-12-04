@@ -124,8 +124,12 @@ class Main:
         node_tags = [node_gmsh - 1 for node_gmsh in node_tags_gmsh]
         
         point_entities = gmsh.model.getBoundary([(1, face)])
-        for dim, tag in point_entities:
-            node_tags.append(gmsh.model.mesh.getNodes(dim, tag)[0][0] - 1)
+        # for dim, tag in point_entities:
+        #     node_tags.append(gmsh.model.mesh.getNodes(dim, tag)[0][0] - 1)
+
+        node_tags.append(point_entities[0][1]-1)
+        node_tags.insert(0, point_entities[1][1]-1)
+        # node_tags.append(point_entities[1][1])
         return node_tags
 
     def plot_displacement_results(self, scale_factor=1., loads=list, dirichlet=list, forces=True, undeformed_mesh=True, deformed_mesh=True):
@@ -165,7 +169,7 @@ class Main:
                     x_coord = self.deformed_coords[node_idx, 0]
                     y_coord = self.deformed_coords[node_idx, 1]
                     
-                    arrow_scale = 1e-6 
+                    arrow_scale = 1e-3
                     
                     plt.quiver(x_coord, y_coord, fx, fy, 
                             scale=1/arrow_scale,
@@ -483,24 +487,26 @@ class Main:
         return n
         
     def pressure_to_force_in_nodes(self, pressure, nodes):
-        load = []
-        for i in range(0, len(nodes) - 1, 2):
-            x1, y1 = self.nodal_coords[nodes[i], :2]
-            x2, y2 = self.nodal_coords[nodes[i+1], :2]
+            load = []
+            for i in range(len(nodes) - 1):
+                n1_idx = nodes[i]
+                n2_idx = nodes[i+1]
 
-            length = np.sqrt((x2-x1)**2 + (y2-y1)**2)
-            n = self.normal_2d([(x1, y1), (x2, y2)])
-            force_per_node = pressure * length / 2
-            load.append([[nodes[i]], n[0]*force_per_node, n[1]*force_per_node])
-            load.append([[nodes[i+1]], n[0]*force_per_node, n[1]*force_per_node])
-        return load
+                x1, y1 = self.nodal_coords[n1_idx, :2]
+                x2, y2 = self.nodal_coords[n2_idx, :2]
 
-    # def pressure_to_force_in_faces(self, pressure:float | int, faces: list):
-    #     for face in faces:
-    #         elements_in_face = gmsh.model.mesh.getElements(1, face)[1]
-            
+                length = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+                n = self.normal_2d([(x1, y1), (x2, y2)])
+                
+                force_total = pressure * length * self.thickness
+                
+                fx = n[0] * force_total / 2
+                fy = n[1] * force_total / 2
 
-
+                load.append([[n1_idx], fx, fy])
+                load.append([[n2_idx], fx, fy])
+                
+            return load
 
 
     def calculate_stress(self):
