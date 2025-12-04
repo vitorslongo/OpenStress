@@ -495,12 +495,9 @@ class Main:
         return load
 
     def pressure_to_force_in_faces(self, pressure:float | int, faces: list):
-        lines_length = [gmsh.model.occ.getMass(1, line) for line in faces]
-        total_length = np.sum(lines_length)
-        total_area = total_length * self.thickness
-        total_force = pressure * total_area
-
-        # n_nodes_in_lines
+        for face in faces:
+            elements_in_face = gmsh.model.mesh.getElements(1, face)[1]
+            node
 
 
 
