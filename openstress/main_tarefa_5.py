@@ -53,7 +53,7 @@ class Main:
         # quarto de circulo pressao interna
         # nodes_from_face_3 = [3, 18, 19, 20, 21, 22, 23, 24, 25, 0]
         nodes_from_intern_face = self.get_nodes_from_face(4)
-        # pressure_load = self.pressure_to_force_in_nodes(self.intern_pressure, nodes_from_intern_face)
+        pressure_load = self.pressure_to_force_in_nodes(self.intern_pressure, nodes_from_intern_face)
         
         # print(pressure_load[0])
         loads = pressure_load
@@ -88,7 +88,7 @@ class Main:
 
         scale_factor = 1
         print("Plotting results")
-        self.plot_displacement_results(scale_factor=scale_factor, loads=loads, dirichlet=dirichlet, forces=True)
+        self.plot_displacement_results(scale_factor=scale_factor, loads=loads, dirichlet=dirichlet, forces=True, undeformed_mesh=True, deformed_mesh=True)
         self.calculate_stress()
         self.get_max_displacement()
         # self.plot_stresses(mesh=False, scale_factor=scale_factor)
@@ -128,7 +128,7 @@ class Main:
             node_tags.append(gmsh.model.mesh.getNodes(dim, tag)[0][0] - 1)
         return node_tags
 
-    def plot_displacement_results(self, scale_factor=1., loads=list, dirichlet=list, forces=True):
+    def plot_displacement_results(self, scale_factor=1., loads=list, dirichlet=list, forces=True, undeformed_mesh=True, deformed_mesh=True):
         original_coords = self.nodal_coords[:, :2] 
         self.deformed_coords = original_coords + scale_factor * self.U
         plotted_nodes = set()
@@ -138,44 +138,45 @@ class Main:
             x_deformed = [self.deformed_coords[n1, 0], self.deformed_coords[n2, 0], self.deformed_coords[n3, 0], self.deformed_coords[n1, 0]]
             y_deformed = [self.deformed_coords[n1, 1], self.deformed_coords[n2, 1], self.deformed_coords[n3, 1], self.deformed_coords[n1, 1]]
             
-            x_original = [original_coords[n1, 0], original_coords[n2, 0], original_coords[n3, 0], original_coords[n1, 0]]
-            y_original = [original_coords[n1, 1], original_coords[n2, 1], original_coords[n3, 1], original_coords[n1, 1]]
+            if undeformed_mesh:
+                x_original = [original_coords[n1, 0], original_coords[n2, 0], original_coords[n3, 0], original_coords[n1, 0]]
+                y_original = [original_coords[n1, 1], original_coords[n2, 1], original_coords[n3, 1], original_coords[n1, 1]]
 
-            plotted_nodes.add(n1)
-            plotted_nodes.add(n2)
-            plotted_nodes.add(n3)
+                plotted_nodes.add(n1)
+                plotted_nodes.add(n2)
+                plotted_nodes.add(n3)
 
-            plt.plot(x_original, y_original, linewidth=0.2, color="gray", zorder=1)
-            # plt.scatter(x_original, y_original, color="gray", zorder=1)
-            if n1 not in plotted_nodes:
-                plt.text(x_original[0], y_original[0], f"{n1}")
-            if n2 not in plotted_nodes:
-                plt.text(x_original[1], y_original[1], f"{n2}")
-            if n3 not in plotted_nodes:
-                plt.text(x_original[2], y_original[2], f"{n3}", horizontalalignment="center")
+                plt.plot(x_original, y_original, linewidth=0.2, color="gray", zorder=1)
+                # plt.scatter(x_original, y_original, color="gray", zorder=1)
+                if n1 not in plotted_nodes:
+                    plt.text(x_original[0], y_original[0], f"{n1}")
+                if n2 not in plotted_nodes:
+                    plt.text(x_original[1], y_original[1], f"{n2}")
+                if n3 not in plotted_nodes:
+                    plt.text(x_original[2], y_original[2], f"{n3}", horizontalalignment="center")
 
-
-            plt.plot(x_deformed, y_deformed, linewidth=1, color="black", zorder=2)
+            if deformed_mesh:
+                plt.plot(x_deformed, y_deformed, linewidth=1, color="black", zorder=2)
             # plt.scatter(x_deformed, y_deformed, color="black", zorder=2)
             
-            if forces:
-                for nodes_applied, fx, fy in loads:
-                    for node_idx in nodes_applied: 
-                        x_coord = self.deformed_coords[node_idx, 0]
-                        y_coord = self.deformed_coords[node_idx, 1]
-                        
-                        arrow_scale = 1e-5 
-                        
-                        plt.quiver(x_coord, y_coord, fx, fy, 
-                                scale=1/arrow_scale,
-                                angles='xy', scale_units='xy', 
-                                color='red', width=0.005, headwidth=5, headlength=7, zorder=3)
-            
-            for nodes_applied, _, _, _ in dirichlet:
-                for node_idx in nodes_applied:
+        if forces:
+            for nodes_applied, fx, fy in loads:
+                for node_idx in nodes_applied: 
                     x_coord = self.deformed_coords[node_idx, 0]
                     y_coord = self.deformed_coords[node_idx, 1]
-                    plt.scatter(x_coord, y_coord, color="green", zorder=3)
+                    
+                    arrow_scale = 1e-6 
+                    
+                    plt.quiver(x_coord, y_coord, fx, fy, 
+                            scale=1/arrow_scale,
+                            angles='xy', scale_units='xy', 
+                            color='red', width=0.005, headwidth=5, headlength=7, zorder=3)
+        
+        for nodes_applied, _, _, _ in dirichlet:
+            for node_idx in nodes_applied:
+                x_coord = self.deformed_coords[node_idx, 0]
+                y_coord = self.deformed_coords[node_idx, 1]
+                plt.scatter(x_coord, y_coord, color="green", zorder=3)
 
         plt.title("Displacements")
 
@@ -494,10 +495,10 @@ class Main:
             load.append([[nodes[i+1]], n[0]*force_per_node, n[1]*force_per_node])
         return load
 
-    def pressure_to_force_in_faces(self, pressure:float | int, faces: list):
-        for face in faces:
-            elements_in_face = gmsh.model.mesh.getElements(1, face)[1]
-            node
+    # def pressure_to_force_in_faces(self, pressure:float | int, faces: list):
+    #     for face in faces:
+    #         elements_in_face = gmsh.model.mesh.getElements(1, face)[1]
+            
 
 
 
