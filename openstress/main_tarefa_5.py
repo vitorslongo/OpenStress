@@ -8,27 +8,28 @@ from matplotlib.tri import Triangulation
 class Main:
     def __init__(self):
         # matplotlib.use('QtAgg')
-        # Data
-        # intern_radius = 30 / 1000
-        # outer_radius = 50 / 1000
-        # self.center = (0, 0, 0)
-        # self.p1 = (intern_radius, 0, 0)
-        # self.p2 = (outer_radius, 0, 0)
-        # self.p3 = (0, outer_radius, 0)
-        # self.p4 = (0, intern_radius, 0)
-        # self.nodes_in_curves = 20
-        # self.nodes_in_lines = 10
-        # self.intern_pressure = 10e6  # Pa
-        # self.E = 200e6
-        # self.nu = 0.3
-
-
-        self.L = 20e-3 #m
-        self.h = 10e-3 #m
-        self.thickness = 10e-3 #m
-        self.t = 20e6 #Pa
-        self.E = 2e9 #Pa
+        # TAREFA 5
+        intern_radius = 30 / 1000
+        outer_radius = 50 / 1000
+        self.center = (0, 0, 0)
+        self.p1 = (intern_radius, 0, 0)
+        self.p2 = (outer_radius, 0, 0)
+        self.p3 = (0, outer_radius, 0)
+        self.p4 = (0, intern_radius, 0)
+        self.nodes_in_curves = 20
+        self.nodes_in_lines = 10
+        self.intern_pressure = 10e6  # Pa
+        self.E = 200e9
         self.nu = 0.3
+        self.thickness = 1e-3 #m
+
+        # TAREFA 4
+        # self.L = 20e-3 #m
+        # self.h = 10e-3 #m
+        # self.t = 20e6 #Pa
+        # self.thickness = 10e-3 #m
+        # self.E = 2e9 #Pa
+        # self.nu = 0.3
 
         # Options
         self.plot_K = 0
@@ -51,9 +52,12 @@ class Main:
 
         # quarto de circulo pressao interna
         # nodes_from_face_3 = [3, 18, 19, 20, 21, 22, 23, 24, 25, 0]
-        # pressure_load = self.pressure_to_force_in_nodes(self.intern_pressure, nodes_from_face_3)
-        # loads = pressure_load
-        # dirichlet = [[self.get_nodes_from_face(1), 0, False, True], [self.get_nodes_from_face(3), 0, True, False]] 
+        nodes_from_intern_face = self.get_nodes_from_face(4)
+        # pressure_load = self.pressure_to_force_in_nodes(self.intern_pressure, nodes_from_intern_face)
+        
+        # print(pressure_load[0])
+        loads = pressure_load
+        dirichlet = [[self.get_nodes_from_face(1), 0, False, True], [self.get_nodes_from_face(3), 0, True, False]] 
         # dirichlet: [[nodes to apply, value, fix x, fix y]]
 
         # quarto de circulo força direita
@@ -66,10 +70,10 @@ class Main:
 
         # Tarefa 4
         # ================================
-        force = self.t*(self.thickness * self.h)
-        loads = [[self.get_nodes_from_face(2), force, 0]]
-        # dirichlet = [[self.get_nodes_from_face(4), 0, True, True]]
-        dirichlet = [[self.get_nodes_from_face(4), 0, True, False], [[0], 0, False, True]]
+        # force = self.t*(self.thickness * self.h)
+        # loads = [[self.get_nodes_from_face(2), force, 0]]
+        # # dirichlet = [[self.get_nodes_from_face(4), 0, True, True]]
+        # dirichlet = [[self.get_nodes_from_face(4), 0, True, False], [[0], 0, False, True]]
 
 
         self.apply_nodal_forces(loads)
@@ -82,13 +86,12 @@ class Main:
         self.U = self.solve()
         print("Solution calculated")
 
+        scale_factor = 1
         print("Plotting results")
-        scale_factor = 1e1
-        # self.plot_displacement_results(scale_factor=scale_factor, loads=[], dirichlet=dirichlet, forces=True)
+        self.plot_displacement_results(scale_factor=scale_factor, loads=loads, dirichlet=dirichlet, forces=True)
         self.calculate_stress()
         self.get_max_displacement()
-        self.plot_stresses(mesh=False, scale_factor=scale_factor)
-        # self.get_sigma_xx(12)
+        # self.plot_stresses(mesh=False, scale_factor=scale_factor)
 
     def check_bc_format(self, input):
         return isinstance(input, list) and all(isinstance(i, list) for i in input)
@@ -236,29 +239,33 @@ class Main:
 
         # =======================================================
 
-        # p1 = occ.addPoint(*self.p1)
-        # p2 = occ.addPoint(*self.p2)
-        # p3 = occ.addPoint(*self.p3)
-        # p4 = occ.addPoint(*self.p4)
-        # center = occ.addPoint(*self.center)
+        # Tarefa 5
 
-        # l1 = occ.addLine(p1, p2)
-        # l2 = occ.addCircleArc(p2, center, p3, center=True)
-        # l3 = occ.addLine(p3, p4)
-        # l4 = occ.addCircleArc(p4, center, p1, center=True)
+        p1 = occ.addPoint(*self.p1)
+        p2 = occ.addPoint(*self.p2)
+        p3 = occ.addPoint(*self.p3)
+        p4 = occ.addPoint(*self.p4)
+        center = occ.addPoint(*self.center)
 
-        # wire = occ.addWire([l1, l2, l3, l4])
-        # surface = occ.addPlaneSurface([wire])
-        # occ.remove([(0, center)])
-        # occ.synchronize()
+        l1 = occ.addLine(p1, p2)
+        l2 = occ.addCircleArc(p2, center, p3, center=True)
+        l3 = occ.addLine(p3, p4)
+        l4 = occ.addCircleArc(p4, center, p1, center=True)
 
-        # mesh.setTransfiniteCurve(l1, self.nodes_in_lines)
-        # mesh.setTransfiniteCurve(l3, self.nodes_in_lines)
-        # mesh.setTransfiniteCurve(l4, self.nodes_in_curves)
-        # mesh.setTransfiniteCurve(l2, self.nodes_in_curves)
-        # mesh.setTransfiniteSurface(surface)
+        wire = occ.addWire([l1, l2, l3, l4])
+        surface = occ.addPlaneSurface([wire])
+        occ.remove([(0, center)])
+        occ.synchronize()
+
+        mesh.setTransfiniteCurve(l1, self.nodes_in_lines)
+        mesh.setTransfiniteCurve(l3, self.nodes_in_lines)
+        mesh.setTransfiniteCurve(l4, self.nodes_in_curves)
+        mesh.setTransfiniteCurve(l2, self.nodes_in_curves)
+        mesh.setTransfiniteSurface(surface)
 
         # =======================================================
+
+        # Retangulo normal
 
         # nodes = 10
         # occ.addRectangle(0, 0, 0, 1, 1)
@@ -267,6 +274,8 @@ class Main:
         # mesh.setTransfiniteSurface(1)
 
         # =======================================================
+
+        # Placa perfurada
 
         # rectangle = occ.addRectangle(0, 0, 0, 1, 1)
         # circle = occ.addDisk(.5, .5, 0, .1, .1)
@@ -289,29 +298,29 @@ class Main:
         # =======================================================
         # Tarefa 4
 
-        p1 = occ.addPoint(0, 0, 0)
-        p2 = occ.addPoint(self.L, 0, 0)
-        p3 = occ.addPoint(self.L, self.h, 0)
-        p4 = occ.addPoint(0, self.h, 0)
+        # p1 = occ.addPoint(0, 0, 0)
+        # p2 = occ.addPoint(self.L, 0, 0)
+        # p3 = occ.addPoint(self.L, self.h, 0)
+        # p4 = occ.addPoint(0, self.h, 0)
 
-        l1 = occ.addLine(p1, p2)
-        l2 = occ.addLine(p2, p3)
-        l3 = occ.addLine(p3, p4)
-        l4 = occ.addLine(p4, p1)
+        # l1 = occ.addLine(p1, p2)
+        # l2 = occ.addLine(p2, p3)
+        # l3 = occ.addLine(p3, p4)
+        # l4 = occ.addLine(p4, p1)
         
-        w1 = occ.addWire([l1, l2, l3, l4])
-        s1 = occ.addPlaneSurface([w1])
-        occ.synchronize()
-        i=3
-        self.n_nodes_h = 4*i
-        self.n_nodes_v = 5*i
-        mesh.setTransfiniteCurve(l1, self.n_nodes_h)
-        mesh.setTransfiniteCurve(l2, self.n_nodes_v)
-        mesh.setTransfiniteCurve(l3, self.n_nodes_h)
-        mesh.setTransfiniteCurve(l4, self.n_nodes_v)
-        mesh.setTransfiniteSurface(s1)
+        # w1 = occ.addWire([l1, l2, l3, l4])
+        # s1 = occ.addPlaneSurface([w1])
+        # occ.synchronize()
+        # i=3
+        # self.n_nodes_h = 4*i
+        # self.n_nodes_v = 5*i
+        # mesh.setTransfiniteCurve(l1, self.n_nodes_h)
+        # mesh.setTransfiniteCurve(l2, self.n_nodes_v)
+        # mesh.setTransfiniteCurve(l3, self.n_nodes_h)
+        # mesh.setTransfiniteCurve(l4, self.n_nodes_v)
+        # mesh.setTransfiniteSurface(s1)
 
-        mesh.generate()
+        # mesh.generate()
         # =======================================================
 
         mesh.generate(2)
@@ -347,7 +356,6 @@ class Main:
         self.conectivity[:, 0] = element_indexes
         self.conectivity[:, 1:] = element_nodes.reshape(-1, 3)
         print(f"Número de nós: {self.number_of_nodes}")
-
 
     def get_constitutive_matrix(self, EPT=False, EPD=False):
         E = self.E
@@ -485,6 +493,17 @@ class Main:
             load.append([[nodes[i]], n[0]*force_per_node, n[1]*force_per_node])
             load.append([[nodes[i+1]], n[0]*force_per_node, n[1]*force_per_node])
         return load
+
+    def pressure_to_force_in_faces(self, pressure:float | int, faces: list):
+        lines_length = [gmsh.model.occ.getMass(1, line) for line in faces]
+        total_length = np.sum(lines_length)
+        total_area = total_length * self.thickness
+        total_force = pressure * total_area
+
+        # n_nodes_in_lines
+
+
+
 
     def calculate_stress(self):
         self.stress = []
