@@ -7,8 +7,6 @@ from matplotlib.tri import Triangulation
 
 class Main:
     def __init__(self):
-        # matplotlib.use('QtAgg')
-        # TAREFA 5
         intern_radius = 30 / 1000
         outer_radius = 50 / 1000
         self.center = (0, 0, 0)
@@ -22,14 +20,6 @@ class Main:
         self.E = 200e9
         self.nu = 0.3
         self.thickness = 1e-3 #m
-
-        # TAREFA 4
-        # self.L = 20e-3 #m
-        # self.h = 10e-3 #m
-        # self.t = 20e6 #Pa
-        # self.thickness = 10e-3 #m
-        # self.E = 2e9 #Pa
-        # self.nu = 0.3
 
         # Options
         self.plot_K = 0
@@ -50,30 +40,11 @@ class Main:
         self.assemble_global()
         print("Assembled matrixes")
 
-        # quarto de circulo pressao interna
-        # nodes_from_face_3 = [3, 18, 19, 20, 21, 22, 23, 24, 25, 0]
         nodes_from_intern_face = self.get_nodes_from_face(4)
         pressure_load = self.pressure_to_force_in_nodes(self.intern_pressure, nodes_from_intern_face)
         
-        # print(pressure_load[0])
         loads = pressure_load
         dirichlet = [[self.get_nodes_from_face(1), 0, False, True], [self.get_nodes_from_face(3), 0, True, False]] 
-        # dirichlet: [[nodes to apply, value, fix x, fix y]]
-
-        # quarto de circulo força direita
-        # loads = [[self.get_nodes_from_face(3), 1000, 0]]
-        # dirichlet = [[self.get_nodes_from_face(1), 0, True, True]]
-
-        # placa furada
-        # loads = [[self.get_nodes_from_face(7), -10000, 0]]
-        # dirichlet = [[self.get_nodes_from_face(8), 0, True, False]]
-
-        # Tarefa 4
-        # ================================
-        # force = self.t*(self.thickness * self.h)
-        # loads = [[self.get_nodes_from_face(2), force, 0]]
-        # # dirichlet = [[self.get_nodes_from_face(4), 0, True, True]]
-        # dirichlet = [[self.get_nodes_from_face(4), 0, True, False], [[0], 0, False, True]]
 
 
         self.apply_nodal_forces(loads)
@@ -86,12 +57,12 @@ class Main:
         self.U = self.solve()
         print("Solution calculated")
 
-        scale_factor = 1
+        scale_factor = 1e3
         print("Plotting results")
         self.plot_displacement_results(scale_factor=scale_factor, loads=loads, dirichlet=dirichlet, forces=True, undeformed_mesh=True, deformed_mesh=True)
         self.calculate_stress()
         self.get_max_displacement()
-        # self.plot_stresses(mesh=False, scale_factor=scale_factor)
+        self.plot_stresses(mesh=False, scale_factor=scale_factor)
 
     def check_bc_format(self, input):
         return isinstance(input, list) and all(isinstance(i, list) for i in input)
