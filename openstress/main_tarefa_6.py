@@ -7,8 +7,8 @@ from matplotlib.tri import Triangulation
 
 class Main:
     def __init__(self):
-        intern_radius = 30 / 1000
-        outer_radius = 50 / 1000
+        intern_radius = 45e-3 #m
+        outer_radius = 72e-3 #m
         self.center = (0, 0, 0)
         self.p1 = (intern_radius, 0, 0)
         self.p2 = (outer_radius, 0, 0)
@@ -16,10 +16,12 @@ class Main:
         self.p4 = (0, intern_radius, 0)
         self.nodes_in_curves = 20
         self.nodes_in_lines = 10
-        self.intern_pressure = 10e6  # Pa
+        self.intern_pressure = 85e6  # Pa
         self.E = 200e9
         self.nu = 0.3
         self.thickness = 1e-3 #m
+        self.S_u = 580e6 #Pa
+        self.S_y = 320e6 #Pa
 
         # Options
         self.plot_K = 0
@@ -65,6 +67,17 @@ class Main:
         self.plot_stresses(mesh=False, scale_factor=scale_factor)
         print("================================")
         self.print_results()
+
+        S_e = 0.5 * self.S_u
+        S = self.sigma_nodal[self.idx_vm_max]
+        R = 0
+        # a = 680.4e6
+        # b = -0.085
+        a = ((0.9 * self.S_u)**2) / S_e
+        b = (-1/3) * np.log10(0.9 * self.S_u / S_e)
+        n_cicles = self.get_fatigue_life(self.S_u, S_e, S, R, a, b)
+        print("================================")
+        print("A peça suporta", f"{n_cicles:.2e}", "ciclos.")
 
 
     def check_bc_format(self, input):
@@ -534,20 +547,23 @@ class Main:
         counts_safe = np.where(counts==0, 1, counts)
         S /= counts_safe[:, None]
 
-        vm = self.von_mises(S[:,0], S[:,1], S[:,2])
+        self.vm = self.von_mises(S[:,0], S[:,1], S[:,2])
         s1, s2 = self.principal_stresses(S[:,0], S[:,1], S[:,2])
         # s_max_principal = np.maximum(s1, s2)
 
-        idx_vm_max = np.argmax(vm)
+        self.idx_vm_max = np.argmax(self.vm)
         # idx_s1_max = np.argmax(s1)
         print("================================")
-        print("Max Von Mises Stress (MPa):", round(vm[idx_vm_max]/10**6, 3), "node:", idx_vm_max+1)
+        vm_max = self.vm[self.idx_vm_max]
+        print("Max Von Mises Stress (MPa):", round(vm_max/10**6, 3), "node:", self.idx_vm_max+1)
+        n = self.S_y / vm_max 
+        print("The safety factor (n) for yielding is", f"{n:.2f}")
         # print("s1_max (MPa):", round(s1[idx_s1_max]/10**6, 3), "node:", idx_s1_max)
 
-        threshold = np.percentile(vm, 95)
-        hot_nodes = np.where(vm >= threshold)[0]
+        threshold = np.percentile(self.vm, 95)
+        hot_nodes = np.where(self.vm >= threshold)[0]
         print("n hot nodes:", len(hot_nodes), "threshold:", threshold)
-        self.vm = vm
+        self.vm = self.vm
 
 
     def principal_stresses(self, sx, sy, txy):
@@ -631,6 +647,34 @@ class Main:
         Svme = self.vm[outer_radius_right_node]
         print("Tensão de Von Mises interna", round(Svmi/1e6, 3), "MPa")
         print("Tensão de Von Mises externa", round(Svme/1e6, 3), "MPa")
+
+
+    def get_fatigue_life(self, S_R: float, S_e: float, S: list[float], R: float, a: float, b: float):
+        """        
+         S_R: Ultimate tensile strength
+         S_e: Fatigue strength
+         S: Maximum load components [sigma_x, sigma_y, tau_xy]
+         R: stress ratio (min and max)
+         a: S-N curve coefficient a (y=ax+b)
+         b: S-N curve coefficient b (y=ax+b)
+        """
+        S = np.array(S)
+        
+        S_min = R*S
+        S_max = S
+
+        S_m_components = (S_max+S_min) / 2 # average stress 
+        S_a_components = (S_max-S_min) / 2 # alternated stress
+
+        S_m = self.von_mises(*S_m_components)
+        S_a = self.von_mises(*S_a_components)
+
+        S_a_eq = (S_a * S_R) / (S_R - S_m)
+
+        N = (S_a_eq / a)**(1/b)
+
+        return N
+
 
 if __name__ == "__main__":
     Main()
